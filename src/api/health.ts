@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { JavaScriptRunner } from "@/runners/javascript";
 import { asyncHandler, sendResponse } from "@/utils/apiHandler";
 
 const healthApi = new Hono();
@@ -11,6 +12,7 @@ healthApi.get(
 			timestamp: new Date().toISOString(),
 			uptime: process.uptime(),
 			service: "valkode-executor",
+			processPool: JavaScriptRunner.getPoolStats(),
 		};
 
 		return sendResponse(c, 200, healthData, "Service is healthy");

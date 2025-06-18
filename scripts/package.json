@@ -1,0 +1,9 @@
+{
+	"name": "valkode-js-executor",
+	"version": "1.0.0",
+	"description": "Isolated JavaScript executor for Valkode",
+	"main": "js-executor.js",
+	"dependencies": {
+		"isolated-vm": "^6.0.0"
+	}
+}

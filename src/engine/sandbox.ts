@@ -1,51 +1,68 @@
 import { spawn } from "node:child_process";
+import { JavaScriptRunner } from "@/runners/javascript";
 import type { ExecutionResult, SandboxConfig } from "@/types/execution";
 import { ApiError } from "@/utils/apiHandler";
 
 export class Sandbox {
 	private config: SandboxConfig;
+	private jsRunner: JavaScriptRunner;
 
 	constructor(config: SandboxConfig = { timeout: 5000, memoryLimit: 128 }) {
 		this.config = config;
+		this.jsRunner = new JavaScriptRunner({
+			timeout: config.timeout,
+			memoryLimit: config.memoryLimit,
+		});
 	}
 
 	async execute(code: string, language: string): Promise<ExecutionResult> {
-		const startTime = process.hrtime.bigint(); // Use high-resolution time
+		const startTime = process.hrtime.bigint();
 
-		this.validateCode(code);
+		this.validateCode(code, language);
 		const output = await this.runInIsolation(code, language);
 
 		const endTime = process.hrtime.bigint();
-		const executionTime = Number(endTime - startTime) / 1000000; // Convert nanoseconds to milliseconds
+		const executionTime = Number(endTime - startTime) / 1000000;
 
 		return {
 			success: true,
 			output,
-			executionTime: Math.max(1, Math.round(executionTime)), // Ensure minimum 1ms
+			executionTime: Math.max(1, Math.round(executionTime)),
 		};
 	}
 
-	private validateCode(code: string): void {
+	private validateCode(code: string, language: string): void {
 		if (!code || code.trim().length === 0) {
 			throw new ApiError(400, "Code cannot be empty");
 		}
 
-		// Basic security checks
+		// Enhanced security checks for non-JS languages
+		// Note: isolated-vm handles JS/TS security, so we only need basic validation there
 		const dangerousPatterns = [
-			/require\s*\(\s*['"]fs['"]\s*\)/,
-			/require\s*\(\s*['"]child_process['"]\s*\)/,
-			/require\s*\(\s*['"]os['"]\s*\)/,
-			/process\./,
+			// Python patterns
+			/import\s+(os|sys|subprocess|shutil|glob|socket|urllib|requests|http)/,
+			/from\s+(os|sys|subprocess|shutil|glob|socket|urllib|requests|http)/,
+			/__import__\s*\(/,
+			/exec\s*\(/,
 			/eval\s*\(/,
-			/Function\s*\(/,
+
+			// Go patterns
+			/import\s+["']os["']/,
+			/import\s+["']net["']/,
+			/import\s+["']syscall["']/,
+			/import\s+["']os\/exec["']/,
 		];
 
-		for (const pattern of dangerousPatterns) {
-			if (pattern.test(code)) {
-				throw new ApiError(
-					403,
-					"Code contains potentially dangerous operations",
-				);
+		// Only apply dangerous pattern checks to non-JavaScript languages
+		const jsLanguages = ["javascript", "js", "typescript", "ts"];
+		if (!jsLanguages.includes(language.toLowerCase())) {
+			for (const pattern of dangerousPatterns) {
+				if (pattern.test(code)) {
+					throw new ApiError(
+						403,
+						"Code contains potentially dangerous operations",
+					);
+				}
 			}
 		}
 	}
@@ -57,11 +74,11 @@ export class Sandbox {
 		switch (language.toLowerCase()) {
 			case "javascript":
 			case "js":
-				return this.executeJavaScript(code);
+				return this.jsRunner.execute(code);
 
 			case "typescript":
 			case "ts":
-				return this.executeTypeScript(code);
+				return this.jsRunner.executeTypeScript(code);
 
 			case "python":
 			case "py":
@@ -73,32 +90,6 @@ export class Sandbox {
 			default:
 				throw new ApiError(400, `Language '${language}' is not supported`);
 		}
-	}
-
-	private executeJavaScript(code: string): string {
-		const originalConsole = console.log;
-		let output = "";
-
-		try {
-			// Capture console.log output
-			console.log = (...args) => {
-				output += `${args.map((arg) => String(arg)).join(" ")}\n`;
-			};
-
-			// Execute the code in a function scope
-			const fn = new Function(code);
-			fn();
-		} finally {
-			// Always restore original console.log
-			console.log = originalConsole;
-		}
-
-		return output.trim() || "Code executed successfully (no output)";
-	}
-
-	private executeTypeScript(code: string): string {
-		// For now, treat TypeScript as JavaScript
-		return this.executeJavaScript(code);
 	}
 
 	private async executePython(code: string): Promise<string> {
@@ -145,7 +136,6 @@ export class Sandbox {
 				}
 			});
 
-			// Handle timeout
 			const timeoutId = setTimeout(() => {
 				if (isResolved) return;
 				isResolved = true;
@@ -160,7 +150,6 @@ export class Sandbox {
 				reject(new ApiError(408, "Python execution timeout"));
 			}, this.config.timeout);
 
-			// Clear timeout if process completes
 			python.on("exit", () => {
 				clearTimeout(timeoutId);
 			});
@@ -209,11 +198,9 @@ export class Sandbox {
 				}
 			});
 
-			// Send the code to stdin
 			goRun.stdin.write(code);
 			goRun.stdin.end();
 
-			// Handle timeout
 			const timeoutId = setTimeout(() => {
 				if (isResolved) return;
 				isResolved = true;
@@ -228,7 +215,6 @@ export class Sandbox {
 				reject(new ApiError(408, "Go execution timeout"));
 			}, this.config.timeout);
 
-			// Clear timeout if process completes
 			goRun.on("exit", () => {
 				clearTimeout(timeoutId);
 			});

@@ -71,7 +71,8 @@ describe("Valkode API", () => {
 		const res = await app.fetch(req);
 		const data = await res.json();
 
-		expect(res.status).toBe(403);
-		expect(data.message).toBe("Code contains potentially dangerous operations");
+		expect(res.status).toBe(400); // Changed from 403 to 400
+		expect(data.success).toBe(false);
+		expect(data.message).toContain("require is not defined"); // More specific assertion
 	});
 });

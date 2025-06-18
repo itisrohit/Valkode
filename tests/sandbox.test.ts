@@ -42,11 +42,14 @@ describe("Sandbox", () => {
 
 	test("Security validation works", async () => {
 		try {
+			// With isolated-vm, require is simply not available, so this will throw a ReferenceError
 			await sandbox.execute('require("fs");', "javascript");
 			expect(true).toBe(false); // Should not reach here
 		} catch (error) {
 			expect(error).toBeInstanceOf(ApiError);
-			expect((error as ApiError).statusCode).toBe(403);
+			// isolated-vm will return a 400 error because require is not defined
+			expect((error as ApiError).statusCode).toBe(400);
+			expect((error as ApiError).message).toContain("require is not defined");
 		}
 	});
 });
