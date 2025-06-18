@@ -35,67 +35,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3 golang-go
 
-      - name: Install main dependencies
-        run: bun install
-
-      - name: Install worker dependencies
+      - name: Run CI simulation
+        timeout-minutes: 3
         run: |
-          cd scripts
-          npm install
-          cd ..
-
-      - name: Run linting
-        run: bun run lint
-
-      - name: Run type checking
-        run: bun run type-check
-
-      - name: Run tests
-        run: bun test
-
-      - name: Test server startup
-        run: |
-          timeout 30s bun run src/server.ts &
-          SERVER_PID=$!
-          sleep 10
-          curl -f http://localhost:3000/api/v1/health
-          kill $SERVER_PID || true
-        env:
-          PORT: 3000
-
-      - name: Test process pool under load
-        timeout-minutes: 1
-        run: |
-          # Start server
-          bun run src/server.ts &
-          SERVER_PID=$!
-          sleep 5
-          
-          echo "Starting 5 concurrent requests..."
-          
-          # Launch all requests and capture their PIDs
-          for i in {1..5}; do
-            timeout 30s curl -X POST http://localhost:3000/api/v1/execute \
-              -H "Content-Type: application/json" \
-              -d "{\"code\": \"console.log('CI Test $i');\", \"language\": \"javascript\"}" \
-              > /dev/null 2>&1 &
-          done
-          
-          echo "Waiting for all requests..."
-          # Wait for all background jobs with a timeout
-          timeout 45s bash -c 'wait'
-          
-          echo "All requests completed"
-          
-          # Quick verification without hanging
-          echo "Final verification..."
-          timeout 5s curl -s http://localhost:3000/api/v1/health > /tmp/health.json || true
-          
-          # Force kill server immediately
-          echo "Killing server..."
-          kill -9 $SERVER_PID 2>/dev/null || true
-          
-          echo "✅ Load test completed successfully"
+          chmod +x scripts/test-ci.sh
+          ./scripts/test-ci.sh
 
   deploy:
     needs: [test]
