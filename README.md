@@ -296,14 +296,6 @@ Please ensure:
 
 ---
 
-## 🏆 Built with Pride
-
-Valkode is not just a code executor — it’s an engine of performance, security, and scalability.
-
-* ⚡ Powered by **Bun**
-* 🔒 Secured by **V8**
-* 🧠 Driven by smart **process pools**
-
 > Made with ❤️ by [Rohit Kumar](https://github.com/itisrohit)
 > 
 > ⭐ **Star this repo** if it helped you!
