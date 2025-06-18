@@ -99,12 +99,13 @@ export class Sandbox {
 	private async executePython(code: string): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const python = spawn("python3", ["-c", code], {
-				timeout: this.config.timeout,
 				stdio: ["pipe", "pipe", "pipe"],
+				// Remove timeout from spawn options
 			});
 
 			let output = "";
 			let errorOutput = "";
+			let isResolved = false;
 
 			python.stdout.on("data", (data) => {
 				output += data.toString();
@@ -115,6 +116,9 @@ export class Sandbox {
 			});
 
 			python.on("close", (code) => {
+				if (isResolved) return;
+				isResolved = true;
+
 				if (code === 0) {
 					resolve(output.trim() || "Code executed successfully (no output)");
 				} else {
@@ -125,6 +129,9 @@ export class Sandbox {
 			});
 
 			python.on("error", (error) => {
+				if (isResolved) return;
+				isResolved = true;
+
 				if (error.message.includes("ENOENT")) {
 					reject(new ApiError(500, "Python3 is not installed on this system"));
 				} else {
@@ -134,23 +141,38 @@ export class Sandbox {
 				}
 			});
 
-			// Handle timeout
-			setTimeout(() => {
-				python.kill("SIGKILL");
+			// Handle timeout - simplified
+			const timeoutId = setTimeout(() => {
+				if (isResolved) return;
+				isResolved = true;
+
+				python.kill("SIGTERM"); // Use SIGTERM first, then SIGKILL if needed
+				setTimeout(() => {
+					if (!python.killed) {
+						python.kill("SIGKILL");
+					}
+				}, 1000);
+
 				reject(new ApiError(408, "Python execution timeout"));
 			}, this.config.timeout);
+
+			// Clear timeout if process completes
+			python.on("exit", () => {
+				clearTimeout(timeoutId);
+			});
 		});
 	}
 
 	private async executeGo(code: string): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const goRun = spawn("go", ["run", "-"], {
-				timeout: this.config.timeout,
 				stdio: ["pipe", "pipe", "pipe"],
+				// Remove timeout from spawn options
 			});
 
 			let output = "";
 			let errorOutput = "";
+			let isResolved = false;
 
 			goRun.stdout.on("data", (data) => {
 				output += data.toString();
@@ -161,6 +183,9 @@ export class Sandbox {
 			});
 
 			goRun.on("close", (code) => {
+				if (isResolved) return;
+				isResolved = true;
+
 				if (code === 0) {
 					resolve(output.trim() || "Code executed successfully (no output)");
 				} else {
@@ -171,6 +196,9 @@ export class Sandbox {
 			});
 
 			goRun.on("error", (error) => {
+				if (isResolved) return;
+				isResolved = true;
+
 				if (error.message.includes("ENOENT")) {
 					reject(new ApiError(500, "Go is not installed on this system"));
 				} else {
@@ -182,11 +210,25 @@ export class Sandbox {
 			goRun.stdin.write(code);
 			goRun.stdin.end();
 
-			// Handle timeout
-			setTimeout(() => {
-				goRun.kill("SIGKILL");
+			// Handle timeout - simplified
+			const timeoutId = setTimeout(() => {
+				if (isResolved) return;
+				isResolved = true;
+
+				goRun.kill("SIGTERM");
+				setTimeout(() => {
+					if (!goRun.killed) {
+						goRun.kill("SIGKILL");
+					}
+				}, 1000);
+
 				reject(new ApiError(408, "Go execution timeout"));
 			}, this.config.timeout);
+
+			// Clear timeout if process completes
+			goRun.on("exit", () => {
+				clearTimeout(timeoutId);
+			});
 		});
 	}
 }
