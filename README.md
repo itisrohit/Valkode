@@ -65,7 +65,7 @@ A **blazingly fast**, **ultra-secure** code execution engine built with a revolu
 ### Prerequisites
 
 - [Bun](https://bun.sh/) installed on your system
-- [Node.js](https://nodejs.org/) v23+ for isolated-vm workers
+- [Node.js](https://nodejs.org/) v24+ for isolated-vm workers  # Updated requirement
 - Python 3.x for Python code execution (optional)
 - Go for Go code execution (optional)
 
