@@ -1,52 +1,52 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { Sandbox } from "../src/engine/sandbox";
 import { ApiError } from "../src/utils/apiHandler";
 
 describe("Sandbox", () => {
-  const sandbox = new Sandbox();
+	const sandbox = new Sandbox();
 
-  test("JavaScript execution works", async () => {
-    const result = await sandbox.execute('console.log("Hello");', "javascript");
-    
-    expect(result.success).toBe(true);
-    expect(result.output).toBe("Hello");
-    expect(result.executionTime).toBeGreaterThan(0);
-  });
+	test("JavaScript execution works", async () => {
+		const result = await sandbox.execute('console.log("Hello");', "javascript");
 
-  test("Python execution works", async () => {
-    const result = await sandbox.execute('print("Hello Python")', "python");
-    
-    expect(result.success).toBe(true);
-    expect(result.output).toBe("Hello Python");
-  });
+		expect(result.success).toBe(true);
+		expect(result.output).toBe("Hello");
+		expect(result.executionTime).toBeGreaterThan(0);
+	});
 
-  test("Unsupported language throws ApiError", async () => {
-    try {
-      await sandbox.execute('print("test")', "unsupported");
-      expect(true).toBe(false); // Should not reach here
-    } catch (error) {
-      expect(error).toBeInstanceOf(ApiError);
-      expect((error as ApiError).statusCode).toBe(400);
-    }
-  });
+	test("Python execution works", async () => {
+		const result = await sandbox.execute('print("Hello Python")', "python");
 
-  test("Empty code throws ApiError", async () => {
-    try {
-      await sandbox.execute("", "javascript");
-      expect(true).toBe(false); // Should not reach here
-    } catch (error) {
-      expect(error).toBeInstanceOf(ApiError);
-      expect((error as ApiError).statusCode).toBe(400);
-    }
-  });
+		expect(result.success).toBe(true);
+		expect(result.output).toBe("Hello Python");
+	});
 
-  test("Security validation works", async () => {
-    try {
-      await sandbox.execute('require("fs");', "javascript");
-      expect(true).toBe(false); // Should not reach here
-    } catch (error) {
-      expect(error).toBeInstanceOf(ApiError);
-      expect((error as ApiError).statusCode).toBe(403);
-    }
-  });
+	test("Unsupported language throws ApiError", async () => {
+		try {
+			await sandbox.execute('print("test")', "unsupported");
+			expect(true).toBe(false); // Should not reach here
+		} catch (error) {
+			expect(error).toBeInstanceOf(ApiError);
+			expect((error as ApiError).statusCode).toBe(400);
+		}
+	});
+
+	test("Empty code throws ApiError", async () => {
+		try {
+			await sandbox.execute("", "javascript");
+			expect(true).toBe(false); // Should not reach here
+		} catch (error) {
+			expect(error).toBeInstanceOf(ApiError);
+			expect((error as ApiError).statusCode).toBe(400);
+		}
+	});
+
+	test("Security validation works", async () => {
+		try {
+			await sandbox.execute('require("fs");', "javascript");
+			expect(true).toBe(false); // Should not reach here
+		} catch (error) {
+			expect(error).toBeInstanceOf(ApiError);
+			expect((error as ApiError).statusCode).toBe(403);
+		}
+	});
 });
