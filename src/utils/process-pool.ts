@@ -9,6 +9,7 @@ interface PoolWorker {
 	busy: boolean;
 	requestCount: number;
 	lastUsed: number;
+	createdAt: number;
 }
 
 interface ExecutionRequest {
@@ -67,7 +68,7 @@ export class JavaScriptProcessPool extends EventEmitter {
 
 		this.minWorkers = options.minWorkers ?? 2;
 		this.maxWorkers = options.maxWorkers ?? 8;
-		this.workerIdleTimeout = options.workerIdleTimeout ?? 30000;
+		this.workerIdleTimeout = options.workerIdleTimeout ?? 300000; // 5 minutes
 		this.maxQueueSize = options.maxQueueSize ?? 100;
 		this.scriptPath = path.join(
 			process.cwd(),
@@ -76,7 +77,8 @@ export class JavaScriptProcessPool extends EventEmitter {
 		);
 
 		this.initialize();
-		setInterval(() => this.cleanupIdleWorkers(), 10000);
+		// COMMENT OUT THIS LINE FOR NOW
+		setInterval(() => this.cleanupIdleWorkers(), 300000); // 5 minutes
 	}
 
 	private async initialize(): Promise<void> {
@@ -101,12 +103,14 @@ export class JavaScriptProcessPool extends EventEmitter {
 			env: { ...process.env, NODE_ENV: "production" },
 		});
 
+		const now = Date.now();
 		const worker: PoolWorker = {
 			id: workerId,
 			process: childProcess,
 			busy: false,
 			requestCount: 0,
-			lastUsed: Date.now(),
+			lastUsed: now,
+			createdAt: now, // Track creation time
 		};
 
 		// Handle worker output (execution results)
@@ -237,20 +241,40 @@ export class JavaScriptProcessPool extends EventEmitter {
 	private cleanupIdleWorkers(): void {
 		const now = Date.now();
 
-		for (const [workerId, worker] of this.workers.entries()) {
-			const idleTime = now - worker.lastUsed;
+		// Always maintain minimum workers
+		if (this.workers.size <= this.minWorkers) {
+			return;
+		}
 
-			// Keep minimum workers alive, cleanup excess idle workers
-			if (
-				this.workers.size > this.minWorkers &&
-				!worker.busy &&
-				idleTime > this.workerIdleTimeout
-			) {
+		// Count actually idle workers - exclude recently created workers
+		const idleWorkerEntries = Array.from(this.workers.entries())
+			.filter(([_, worker]) => !worker.busy)
+			.filter(([_, worker]) => {
+				// Don't cleanup workers created in the last 60 seconds
+				const workerAge = now - worker.createdAt;
+				return workerAge > 60000;
+			})
+			.map(([id, worker]) => ({
+				id,
+				worker,
+				idleTime: now - worker.lastUsed,
+			}))
+			.filter((entry) => entry.idleTime > this.workerIdleTimeout)
+			.sort((a, b) => b.idleTime - a.idleTime); // Sort by most idle first
+
+		// Only cleanup excess workers, one at a time
+		const maxToCleanup = Math.max(0, this.workers.size - this.minWorkers);
+
+		if (idleWorkerEntries.length > 0 && maxToCleanup > 0) {
+			const toCleanup = idleWorkerEntries[0];
+
+			// Add explicit check to satisfy TypeScript
+			if (toCleanup) {
 				console.log(
-					`🧹 Cleaning up idle worker ${workerId} (idle for ${idleTime}ms)`,
+					`🧹 Cleaning up idle worker ${toCleanup.id} (idle for ${toCleanup.idleTime}ms, age: ${now - toCleanup.worker.createdAt}ms)`,
 				);
-				worker.process.kill("SIGTERM");
-				this.workers.delete(workerId);
+				toCleanup.worker.process.kill("SIGTERM");
+				this.workers.delete(toCleanup.id);
 			}
 		}
 	}

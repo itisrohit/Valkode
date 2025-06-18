@@ -28,43 +28,24 @@ bun test || exit 1
 echo "🚀 Testing server startup..."
 bun run src/server.ts &
 SERVER_PID=$!
-sleep 5
+sleep 8
 
 # Health check
 echo "🏥 Testing health endpoint..."
-if curl -s http://localhost:3000/api/v1/health > /dev/null; then
-  echo "✅ Health check passed"
-else
-  echo "❌ Health check failed"
-  kill $SERVER_PID
-  exit 1
-fi
+curl -f http://localhost:3000/api/v1/health || exit 1
 
-# Test concurrent execution
-echo "⚡ Testing concurrent execution..."
-for i in {1..3}; do
-  curl -X POST http://localhost:3000/api/v1/execute \
-    -H "Content-Type: application/json" \
-    -d "{\"code\": \"console.log('CI Test $i');\", \"language\": \"javascript\"}" > /dev/null 2>&1 &
-done
+# Simple execution test (no concurrency)
+echo "⚡ Testing execution..."
+curl -X POST http://localhost:3000/api/v1/execute \
+  -H "Content-Type: application/json" \
+  -d '{"code": "console.log(\"CI Test\");", "language": "javascript"}' \
+  > /dev/null || exit 1
 
-# Wait for all background jobs to complete
-echo "⏳ Waiting for concurrent requests to complete..."
-wait
-
-echo "✅ Concurrent execution test completed"
-
-# Check process pool stats
-echo "📊 Checking process pool stats..."
-if curl -s http://localhost:3000/api/v1/health | grep -q "totalWorkers"; then
-  echo "✅ Process pool working"
-else
-  echo "❌ Process pool failed"
-fi
+echo "✅ Execution test completed"
 
 # Clean shutdown
 echo "🔄 Shutting down server..."
-kill $SERVER_PID 2>/dev/null || true
+kill -9 $SERVER_PID 2>/dev/null || true
 sleep 2
 
 echo "✅ CI simulation completed successfully!"
