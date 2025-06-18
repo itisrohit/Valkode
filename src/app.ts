@@ -3,6 +3,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { executeApi } from "@/api/execute";
 import { healthApi } from "@/api/health";
+import { docsApi } from '@/api/docs';
 
 const app = new Hono();
 
@@ -22,6 +23,7 @@ const apiPath = "/api/v1";
 // Routes
 app.route(apiPath, executeApi);
 app.route(apiPath, healthApi);
+app.route(apiPath, docsApi);
 
 // Root endpoint
 app.get("/", (c) => {

@@ -29,7 +29,7 @@ export class CodeExecutor {
   }
 
   getSupportedLanguages(): string[] {
-    return ['javascript', 'js', 'typescript', 'ts'];
+    return ['javascript', 'js', 'typescript', 'ts', 'python', 'py', 'go'];
   }
 
   isLanguageSupported(language: string): boolean {

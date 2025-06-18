@@ -1,5 +1,6 @@
 import type { SandboxConfig, ExecutionResult } from "@/types/execution";
 import { ApiError } from "@/utils/apiHandler";
+import { spawn } from "child_process";
 
 export class Sandbox {
   private config: SandboxConfig;
@@ -63,6 +64,9 @@ export class Sandbox {
       case "py":
         return this.executePython(code);
 
+      case "go":
+        return this.executeGo(code);
+
       default:
         throw new ApiError(400, `Language '${language}' is not supported`);
     }
@@ -92,7 +96,91 @@ export class Sandbox {
     return this.executeJavaScript(code);
   }
 
-  private executePython(code: string): string {
-    throw new ApiError(501, "Python execution not implemented yet");
+  private async executePython(code: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const python = spawn('python3', ['-c', code], {
+        timeout: this.config.timeout,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      let output = '';
+      let errorOutput = '';
+
+      python.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      python.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      python.on('close', (code) => {
+        if (code === 0) {
+          resolve(output.trim() || 'Code executed successfully (no output)');
+        } else {
+          reject(new ApiError(400, `Python execution error: ${errorOutput.trim()}`));
+        }
+      });
+
+      python.on('error', (error) => {
+        if (error.message.includes('ENOENT')) {
+          reject(new ApiError(500, 'Python3 is not installed on this system'));
+        } else {
+          reject(new ApiError(500, `Python execution failed: ${error.message}`));
+        }
+      });
+
+      // Handle timeout
+      setTimeout(() => {
+        python.kill('SIGKILL');
+        reject(new ApiError(408, 'Python execution timeout'));
+      }, this.config.timeout);
+    });
+  }
+
+  private async executeGo(code: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const goRun = spawn('go', ['run', '-'], {
+        timeout: this.config.timeout,
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      let output = '';
+      let errorOutput = '';
+
+      goRun.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      goRun.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      goRun.on('close', (code) => {
+        if (code === 0) {
+          resolve(output.trim() || 'Code executed successfully (no output)');
+        } else {
+          reject(new ApiError(400, `Go execution error: ${errorOutput.trim()}`));
+        }
+      });
+
+      goRun.on('error', (error) => {
+        if (error.message.includes('ENOENT')) {
+          reject(new ApiError(500, 'Go is not installed on this system'));
+        } else {
+          reject(new ApiError(500, `Go execution failed: ${error.message}`));
+        }
+      });
+
+      // Send the code to stdin
+      goRun.stdin.write(code);
+      goRun.stdin.end();
+
+      // Handle timeout
+      setTimeout(() => {
+        goRun.kill('SIGKILL');
+        reject(new ApiError(408, 'Go execution timeout'));
+      }, this.config.timeout);
+    });
   }
 }

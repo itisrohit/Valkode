@@ -8,9 +8,15 @@
     "build": "bun build src/server.ts --outdir ./dist",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage",
+    "start": "bun run src/server.ts",
+    "lint:fix": "bunx @biomejs/biome check --apply ."
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
     "@types/bun": "latest",
     "@types/node": "^24.0.3",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
