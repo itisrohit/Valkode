@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         bun-version: [1.0.0]
-        node-version: [24.x] 
+        node-version: [24.x]
 
     steps:
       - uses: actions/checkout@v4
@@ -64,20 +64,36 @@ jobs:
           PORT: 3000
 
       - name: Test process pool under load
+        timeout-minutes: 2
         run: |
           bun run src/server.ts &
           SERVER_PID=$!
           sleep 5
           
-          # Test concurrent requests
+          echo "Starting concurrent requests..."
+          
+          # Test concurrent requests with explicit tracking
           for i in {1..5}; do
-            curl -X POST http://localhost:3000/api/v1/execute \
+            (curl -X POST http://localhost:3000/api/v1/execute \
               -H "Content-Type: application/json" \
-              -d "{\"code\": \"console.log('CI Test $i');\", \"language\": \"javascript\"}" &
+              -d "{\"code\": \"console.log('CI Test $i');\", \"language\": \"javascript\"}" \
+              > /dev/null 2>&1 && echo "Request $i completed") &
           done
+          
+          echo "Waiting for all requests to complete..."
           wait
           
+          echo "All concurrent requests finished"
+          
+          # Verify pool is still working
+          echo "Testing final health check..."
+          curl -s http://localhost:3000/api/v1/health | grep -q "totalWorkers"
+          
+          echo "Shutting down server..."
           kill $SERVER_PID || true
+          sleep 2
+          
+          echo "Load test completed successfully"
 
   deploy:
     needs: [test]
