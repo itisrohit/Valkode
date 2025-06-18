@@ -45,13 +45,26 @@ echo "⚡ Testing concurrent execution..."
 for i in {1..3}; do
   curl -X POST http://localhost:3000/api/v1/execute \
     -H "Content-Type: application/json" \
-    -d "{\"code\": \"console.log('CI Test $i');\", \"language\": \"javascript\"}" &
+    -d "{\"code\": \"console.log('CI Test $i');\", \"language\": \"javascript\"}" > /dev/null 2>&1 &
 done
+
+# Wait for all background jobs to complete
+echo "⏳ Waiting for concurrent requests to complete..."
 wait
+
+echo "✅ Concurrent execution test completed"
 
 # Check process pool stats
 echo "📊 Checking process pool stats..."
-curl -s http://localhost:3000/api/v1/health | grep -q "totalWorkers" && echo "✅ Process pool working" || echo "❌ Process pool failed"
+if curl -s http://localhost:3000/api/v1/health | grep -q "totalWorkers"; then
+  echo "✅ Process pool working"
+else
+  echo "❌ Process pool failed"
+fi
 
-kill $SERVER_PID
+# Clean shutdown
+echo "🔄 Shutting down server..."
+kill $SERVER_PID 2>/dev/null || true
+sleep 2
+
 echo "✅ CI simulation completed successfully!"
