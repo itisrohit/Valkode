@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        bun-version: [1.0.0]
+        bun-version: [1.2.16]  # Updated to latest
         node-version: [24.x]
 
     steps:
@@ -33,16 +33,38 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3 golang-go
+          sudo apt-get install -y python3 python3-pip
 
       - name: Run CI simulation
-        timeout-minutes: 3
+        timeout-minutes: 5  # Extended for daemon initialization
         run: |
           chmod +x scripts/test-ci.sh
           ./scripts/test-ci.sh
 
-  deploy:
+  performance-test:
     needs: [test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: 1.2.16
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run performance benchmarks
+        run: |
+          echo "🚀 Running performance benchmarks..."
+          bun test benchmarks.test.ts --timeout 30000
+          echo "📊 Performance tests completed"
+
+  deploy:
+    needs: [test, performance-test]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 

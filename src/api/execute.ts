@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { CodeExecutor } from "@/engine/executor";
+import { Sandbox } from "@/engine/sandbox"; // Use the hybrid sandbox instead
 import type { ExecutionRequest } from "@/types/execution";
 import {
 	ApiError,
@@ -9,7 +9,7 @@ import {
 } from "@/utils/apiHandler";
 
 const executeApi = new Hono();
-const executor = new CodeExecutor();
+const sandbox = new Sandbox(); // Use sandbox instead of executor
 
 // Validator for execution request
 const isExecutionRequest = (data: unknown): data is ExecutionRequest => {
@@ -49,7 +49,7 @@ executeApi.post(
 			`[EXECUTE] Language: ${request.language}, Code length: ${request.code.length}`,
 		);
 
-		const result = await executor.execute(request);
+		const result = await sandbox.execute(request.code, request.language);
 
 		console.log(
 			`[RESULT] Success: ${result.success}, Time: ${result.executionTime}ms`,
@@ -62,7 +62,8 @@ executeApi.post(
 executeApi.get(
 	"/languages",
 	asyncHandler(async (c) => {
-		const languages = executor.getSupportedLanguages();
+		// Return all supported languages from both systems
+		const languages = ["javascript", "js", "typescript", "ts", "python", "py"];
 
 		return sendResponse(c, 200, { languages }, "Supported languages retrieved");
 	}),

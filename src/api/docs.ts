@@ -32,7 +32,6 @@ docsApi.get(
 				"ts",
 				"python",
 				"py",
-				"go",
 			],
 		};
 

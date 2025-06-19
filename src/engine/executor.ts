@@ -1,41 +1,58 @@
 import type { ExecutionRequest, ExecutionResult } from "@/types/execution";
-import { ApiError } from "@/utils/apiHandler";
-import { Sandbox } from "./sandbox";
+import { runnerRegistry } from "./runner-registry";
 
 export class CodeExecutor {
-	private sandbox: Sandbox;
+	private initialized = false;
 
-	constructor() {
-		this.sandbox = new Sandbox({
-			timeout: 5000,
-			memoryLimit: 128,
-		});
+	async initialize(): Promise<void> {
+		if (this.initialized) return;
+
+		await runnerRegistry.initialize();
+		this.initialized = true;
 	}
 
 	async execute(request: ExecutionRequest): Promise<ExecutionResult> {
-		if (!this.isLanguageSupported(request.language)) {
-			throw new ApiError(
-				400,
-				`Language '${request.language}' is not supported`,
-			);
+		if (!this.initialized) {
+			await this.initialize();
 		}
 
-		const { code, language, timeout } = request;
+		const { code, language, timeout = 5000 } = request;
 
-		// Create sandbox with custom timeout if provided
-		const sandbox = new Sandbox({
-			timeout: timeout || 5000,
+		// Get the appropriate runner for this language
+		const runner = runnerRegistry.getRunner(language);
+
+		// Execute with the runner
+		const result = await runner.run(code, {
+			timeout,
 			memoryLimit: 128,
 		});
 
-		return await sandbox.execute(code, language);
+		return {
+			success: result.success,
+			output: result.output,
+			error: result.error,
+			executionTime: result.executionTime,
+		};
 	}
 
 	getSupportedLanguages(): string[] {
-		return ["javascript", "js", "typescript", "ts", "python", "py", "go"];
+		return runnerRegistry.getSupportedLanguages();
+	}
+
+	getAvailableLanguages(): string[] {
+		return runnerRegistry.getAvailableLanguages();
 	}
 
 	isLanguageSupported(language: string): boolean {
 		return this.getSupportedLanguages().includes(language.toLowerCase());
+	}
+
+	getStats() {
+		return runnerRegistry.getAllStats();
+	}
+
+	async shutdown(): Promise<void> {
+		await runnerRegistry.shutdown();
+		this.initialized = false;
 	}
 }

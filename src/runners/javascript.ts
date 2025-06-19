@@ -1,3 +1,4 @@
+import * as typescript from "typescript"; // Import TypeScript properly
 import { ApiError } from "@/utils/apiHandler";
 import { JavaScriptProcessPool } from "@/utils/process-pool";
 
@@ -54,8 +55,52 @@ export class JavaScriptRunner {
 	}
 
 	async executeTypeScript(code: string): Promise<string> {
-		// For now, treat TypeScript same as JavaScript since isolated-vm can handle both
-		return this.execute(code);
+		try {
+			// TypeScript compiler options - more permissive for playground use
+			const compilerOptions: typescript.CompilerOptions = {
+				target: typescript.ScriptTarget.ES2020,
+				module: typescript.ModuleKind.CommonJS,
+				strict: false,
+				esModuleInterop: true,
+				allowSyntheticDefaultImports: true,
+				skipLibCheck: true,
+				noEmitOnError: false,
+				suppressImplicitAnyIndexErrors: true,
+				noImplicitAny: false,
+				lib: ["ES2020", "DOM"],
+				downlevelIteration: true,
+				allowJs: true,
+			};
+
+			// Compile TypeScript to JavaScript
+			const result = typescript.transpileModule(code, {
+				compilerOptions,
+				reportDiagnostics: false,
+			});
+
+			// Check if compilation produced any output
+			if (!result.outputText || result.outputText.trim() === "") {
+				throw new ApiError(400, "TypeScript compilation produced no output");
+			}
+
+			console.log(
+				`📝 TypeScript compiled to: ${result.outputText.substring(0, 100)}...`,
+			);
+
+			// Execute the compiled JavaScript
+			return this.execute(result.outputText);
+		} catch (error) {
+			if (error instanceof ApiError) {
+				throw error;
+			}
+			if (error instanceof Error) {
+				throw new ApiError(
+					400,
+					`TypeScript compilation error: ${error.message}`,
+				);
+			}
+			throw new ApiError(500, "TypeScript compilation failed");
+		}
 	}
 
 	static async shutdownPool(): Promise<void> {
