@@ -1,6 +1,6 @@
 import { PythonDaemonRunner } from "@/runners/python-daemon";
 import { ApiError } from "@/utils/apiHandler";
-import type { Runner } from "./runner-interface";
+import type { Runner } from "../types/runner-interface";
 
 class RunnerRegistry {
 	private runners: Map<string, Runner> = new Map();

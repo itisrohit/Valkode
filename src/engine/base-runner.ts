@@ -8,7 +8,7 @@ import type {
 	PendingRequest,
 	Runner,
 	RunnerMetrics,
-} from "./runner-interface";
+} from "../types/runner-interface";
 
 export abstract class BaseDaemonizedRunner
 	extends EventEmitter
