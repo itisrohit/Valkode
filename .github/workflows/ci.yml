@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        bun-version: [1.0.0]
+        bun-version: [1.2.16]
         node-version: [24.x]  # Changed from 20.x to 24.x
 
     steps:
