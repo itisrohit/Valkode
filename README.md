@@ -2,7 +2,7 @@
 
 > A **blazingly fast**, **security-focused** multi-language code execution engine built on a **next-generation hybrid architecture**.
 >
-> It leverages **Bun + Hono** for ultra-low-latency API performance with **Python daemon pools** and **V8 isolation** for maximum efficiency and control.
+> It leverages **Bun + Hono** for ultra-low-latency API performance while separating execution concerns for maximum efficiency and control.
 
 ---
 
