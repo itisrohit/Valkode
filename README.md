@@ -393,21 +393,6 @@ git push origin feature/your-feature
 
 > **Built with ❤️ by [Rohit Kumar](https://github.com/itisrohit)**
 > 
-> ⭐ **Star this repo** if Valkode helped accelerate your code execution needs!
+> ⭐ **Star this repo** if you liked it!
 
 ---
-
-## 📛 Tech Badges
-
-![Bun](https://img.shields.io/badge/Bun-000000?style=for-the-badge\&logo=bun\&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge\&logo=node.js\&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge\&logo=typescript\&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge\&logo=python\&logoColor=white)
-
-[![Performance](https://img.shields.io/badge/JavaScript-1ms-brightgreen?style=for-the-badge)](https://github.com/itisrohit/valkode)
-[![Performance](https://img.shields.io/badge/Python-1ms-brightgreen?style=for-the-badge)](https://github.com/itisrohit/valkode)
-[![Throughput](https://img.shields.io/badge/Throughput-320%2B_req%2Fs-blue?style=for-the-badge)](https://github.com/itisrohit/valkode)
-[![Security](https://img.shields.io/badge/Security-V8_Isolation-red?style=for-the-badge)](https://github.com/itisrohit/valkode)
-[![Tests](https://img.shields.io/badge/Tests-30_Passing-green?style=for-the-badge)](https://github.com/itisrohit/valkode)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-Passing-green.svg)](https://github.com/itisrohit/valkode)
